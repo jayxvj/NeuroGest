@@ -1,0 +1,238 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
+import cv2
+import pandas as pd
+from joblib import load
+from mediapipe.python.solutions.pose import Pose
+from mediapipe.python.solutions.drawing_utils import draw_landmarks
+from mediapipe.python.solutions.pose_connections import POSE_CONNECTIONS
+
+# Load trained model
+model = load("activity_model.pkl")
+
+# Setup MediaPipe Pose
+pose = Pose(static_image_mode=False, model_complexity=1)
+
+# Webcam
+cap = cv2.VideoCapture(0)
+
+print("🔍 Predicting... Press 'q' to quit.")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame = cv2.flip(frame, 1)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    results = pose.process(rgb)
+
+    activity = "Detecting..."
+
+    if results.pose_landmarks:
+        draw_landmarks(frame, results.pose_landmarks, POSE_CONNECTIONS)
+
+        # Extract and flatten landmarks
+        row = []
+        for lm in results.pose_landmarks.landmark:
+            row.extend([lm.x, lm.y, lm.z])
+
+        if len(row) == 99:  # 33 landmarks * 3 coords
+            columns = [f"{coord}{i}" for i in range(33) for coord in ['x', 'y', 'z']]
+            X = pd.DataFrame([row], columns=columns)
+            activity = model.predict(X)[0]
+
+    # Show activity label
+    cv2.putText(frame, f'Activity: {activity}', (20, 50),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
+
+    cv2.imshow("Real-Time Activity Detection", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+
+
+
+
+import cv2
+import pandas as pd
+import os
+
+from mediapipe.python.solutions.pose import Pose
+from mediapipe.python.solutions.drawing_utils import draw_landmarks
+from mediapipe.python.solutions.pose_connections import POSE_CONNECTIONS
+
+# CSV output file
+CSV_FILE = 'pose_data.csv'
+
+# Initialize MediaPipe pose detection
+pose = Pose(static_image_mode=False, model_complexity=1, enable_segmentation=False)
+
+# If file doesn't exist, create it with headers
+if not os.path.exists(CSV_FILE):
+    columns = [f"{coord}{i}" for i in range(33) for coord in ['x', 'y', 'z']] + ["label"]
+    pd.DataFrame(columns=columns).to_csv(CSV_FILE, index=False)
+
+# Ask user for label
+label = input("Enter label for this activity (e.g., walking, dancing): ").strip()
+
+# Start webcam
+cap = cv2.VideoCapture(0)
+sample_count = 0
+
+print("Press 's' to save a sample. Press 'q' to quit.")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Flip + convert BGR to RGB
+    frame = cv2.flip(frame, 1)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Process pose
+    results = pose.process(rgb)
+
+    # Draw landmarks + collect data
+    if results.pose_landmarks:
+        draw_landmarks(frame, results.pose_landmarks, POSE_CONNECTIONS)
+
+        # Extract 33 (x, y, z) values
+        landmarks = results.pose_landmarks.landmark
+        row = []
+        for lm in landmarks:
+            row.extend([lm.x, lm.y, lm.z])
+
+        # Wait for user input to save
+        key = cv2.waitKey(1)
+        if key == ord('s'):
+            row.append(label)
+            df = pd.read_csv(CSV_FILE)
+            df.loc[len(df)] = row
+            df.to_csv(CSV_FILE, index=False)
+            sample_count += 1
+            print(f"✅ Sample {sample_count} saved for '{label}'.")
+
+        elif key == ord('q'):
+            break
+
+    # Show webcam feed
+    cv2.imshow("Pose Data Collection", frame)
+
+cap.release()
+cv2.destroyAllWindows()
+print(f"\n📦 Total samples collected for '{label}': {sample_count}")
+
+
+
+
+
+
+
+
+
+
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report
+from joblib import dump
+
+# Load the data
+df = pd.read_csv("pose_data.csv")
+
+# Separate features and label
+X = df.drop("label", axis=1)
+y = df["label"]
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a KNN model
+model = KNeighborsClassifier(n_neighbors=3)
+model.fit(X_train, y_train)
+
+# Evaluate
+y_pred = model.predict(X_test)
+print("📊 Model Evaluation:\n")
+print(classification_report(y_test, y_pred))
+
+# Save the trained model
+dump(model, "activity_model.pkl")
+print("\n✅ Trained model saved as 'activity_model.pkl'")
+
+
+
+
+
+
+
+
+
+
+
+
+import pandas as pd
+
+# Load the collected gesture data
+df = pd.read_csv("pose_data.csv")
+
+# Check if the 'label' column exists
+if "label" not in df.columns:
+    raise ValueError("❌ 'label' column not found in CSV. Check your file.")
+
+# Count samples per gesture label
+label_counts = df["label"].value_counts()
+
+# Display results
+print("✅ Samples per gesture label:\n")
+print(label_counts)
+
+# Total number of collected samples
+total_samples = len(df)
+print(f"\n📦 Total samples collected: {total_samples}")
+
+
+
+
+
+
+
+
+
+
+
+import pandas as pd
+
+# Load CSV
+df = pd.read_csv("pose_data.csv")
+
+# Show all unique labels
+print("✅ Available signs:", df['label'].unique())
+
+# Sign you want to delete
+sign_to_remove = input("Enter the label you want to delete: ")
+
+# Filter out the sign
+df_filtered = df[df['label'] != sign_to_remove]
+
+# Save back
+df_filtered.to_csv("pose_data.csv", index=False)
+
+print(f"✅ All samples for '{sign_to_remove}' have been removed.")
+print("Remaining sign counts:\n", df_filtered['label'].value_counts())
