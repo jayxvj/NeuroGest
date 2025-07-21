@@ -1,0 +1,58 @@
+# 🤖 NeuroGest — Human Gesture Recognition Suite
+
+**NeuroGest** is a unified Python-based machine learning project that recognizes **body poses**, **hand signs**, and **facial expressions**, and enables **cursor control** using finger or hand movements.
+
+---
+
+## 📌 Features
+
+- 🧍‍♂️ **Body Pose Recognition**
+- ✋ **Hand Sign Language Detection**
+- 😀 **Facial Expression Recognition**
+- 🖱️ **Cursor Control with Hand/Finger**
+
+---
+
+## 🧰 Tech Stack
+
+- `Python 3.8+`
+- `OpenCV`
+- `MediaPipe`
+- `TensorFlow`
+- `NumPy`
+- `PyAutoGUI`
+
+---
+
+## 🗂️ Project Structure
+
+NeuroGest/
+├── venv/ # Virtual environment
+├── hand_sign_module.py # Hand sign recognition
+├── pose_estimator.py # Body pose tracking
+├── face_expression.py # Facial expression recognition
+├── cursor_control.py # Hand/finger-based mouse control
+├── requirements.txt # All dependencies
+└── README.md # This file
+
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to set up the virtual environment and run the project.
+
+---
+
+### 🔹 Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/NeuroGest.git
+cd NeuroGest
+
+### 🔹Step 2: To Run
+
+```bash
+python your_file.py
+
+---
